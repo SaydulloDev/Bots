@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# All Files
+.Pipfile.lock
+/api_priv
