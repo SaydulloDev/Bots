@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 pytelegrambotapi = "*"
+pytube = "*"
 
 [dev-packages]
 
