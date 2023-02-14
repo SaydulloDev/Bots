@@ -3,7 +3,7 @@ from telebot.types import InputFile, InlineKeyboardMarkup, InlineKeyboardButton
 
 from command_text import HELP
 from api_priv import youtube_io
-from pytube_io import download_video720, download_video480
+from pytube_io import download_video480
 
 BOT_TOKEN = youtube_io()
 
