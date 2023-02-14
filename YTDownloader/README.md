@@ -39,8 +39,10 @@ def get_link(message):
 ```
 
 This Message Handler is Responsible for the Link of the YouTube Video and sends the video user chat.
-![](/home/saydullo/Desktop/photo_2023-02-14_15-17-16.jpg)
+
+![](https://www.linkpicture.com/q/Screenshot-from-2023-02-14-16-00-28.png)
+
 If The User Sends the wrong Link then reply like this
 - Send Video Link YouTube
 
-![](/home/saydullo/Desktop/photo_2023-02-14_15-16-30.jpg)
+![](https://www.linkpicture.com/q/Screenshot-from-2023-02-14-16-00-47.png)
