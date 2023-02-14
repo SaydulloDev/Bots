@@ -18,5 +18,3 @@ def convert(message):
 
 ```
 This is Message Handler only Text type message
-
-![](/home/saydullo/Desktop/rr.png)
