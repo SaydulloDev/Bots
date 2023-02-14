@@ -18,3 +18,6 @@ def convert(message):
 
 ```
 This is Message Handler only Text type message
+
+![](https://www.linkpicture.com/q/rr_1.png)
+This is Answer Bot
