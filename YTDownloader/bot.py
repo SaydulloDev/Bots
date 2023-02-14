@@ -1,9 +1,11 @@
+import time
+
 from telebot import TeleBot
 from telebot.types import InputFile, InlineKeyboardMarkup, InlineKeyboardButton
-
+import os
 from command_text import HELP
 from api_priv import youtube_io
-from pytube_io import download_video480
+from pytube_io import download_video480, send_info
 
 BOT_TOKEN = youtube_io()
 
@@ -33,11 +35,20 @@ def get_link(message):
     chat_id = message.chat.id
     url = message.text
     button_markup = InlineKeyboardMarkup()
+    share = f"https://t.me/share/{url}"
+    share_button = InlineKeyboardButton('Share⛓', url=f"{share}")
     link_video = InlineKeyboardButton('Link🔗', url=f'{url}')
-    button_markup.add(link_video)
-    if url.find('youtu'):
-        bot.send_video(chat_id, video=InputFile(download_video480(url)), caption=f'Format Video 720p',
-                       reply_markup=button_markup)
+    button_markup.add(link_video, share_button)
+    if len(url) > 8:
+        if url.find('youtu'):
+            vid = download_video480(url)
+            bot.send_video(chat_id, video=InputFile(vid), caption=f'Format Video 480p',
+                           reply_markup=button_markup)
+            if os.path.exists(vid):
+                time.sleep(100)
+                os.remove(vid)
+        else:
+            bot.send_message(chat_id, 'Send Video Link YouTube!')
     else:
         bot.send_message(chat_id, 'Send Video Link YouTube!')
 

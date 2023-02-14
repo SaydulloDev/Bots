@@ -1,4 +1,7 @@
+import time
+
 from pytube import YouTube
+import os
 
 
 def send_info(url):
@@ -10,6 +13,9 @@ def download_video720(url):
     yt = YouTube(url)
     video = yt.streams.filter(res='720p').first()
     video.download('./')
+    if os.path.exists(video):
+        time.sleep(600)
+        os.remove(video)
     return video.default_filename
 
 
