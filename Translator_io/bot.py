@@ -26,7 +26,7 @@ lang = []
 @bot.callback_query_handler(lambda call: call.data.startswith('lang_'))
 def send_select_lang(call):
     message = call.message
-    lang_user = LANGUAGES.get(call.data[-2::]).title()
+    lang_user = LANGUAGES.get(call.data[-3::]).title()
     lang.append(lang_user)
     msg = bot.send_message(message.chat.id,
                            f'Translate to {lang_user}\nSend text for translate')
