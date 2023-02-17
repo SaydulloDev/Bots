@@ -1,7 +1,7 @@
 from api_priv import trello_com_bot
 from telebot import TeleBot
 from utils import write_chat_csv, get_trello_user, get_trello_username_by_chat_id, get_member_task_message
-from keyboards import get_inline_boards_btn, get_inline_lists_btn, get_lists_btn, get_members_btn
+from keyboards import get_inline_boards_btn, get_inline_lists_btn, get_members_btn
 from trello import TrelloAPIManager
 from states import CreateNewTask
 import messages
@@ -76,11 +76,8 @@ def get_member_cards_to_user(call):
         bot.send_message(message.chat.id, messages.NO_TASK)
 
 
-new_task_user = {}
-
-
-@bot.message_handler(commands=['new'])
-def new_task_user(message):
+@bot.message_handler(commands=["new"])
+def create_new_task(message):
     if not get_trello_user("user.csv", message.chat.id):
         bot.send_message(message.chat.id, messages.TRELLO_USER_NOT_FOUND)
     else:
@@ -90,47 +87,74 @@ def new_task_user(message):
                 message.chat.id, messages.CREATE_TASK,
                 reply_markup=get_inline_boards_btn(trello_username, "new_tasks")
             )
+            bot.set_state(message.from_user.id, CreateNewTask.board, message.chat.id)
         else:
             bot.send_message(message.chat.id, messages.TRELLO_USER_NOT_FOUND)
 
 
-@bot.callback_query_handler(lambda call: call.data.split('new_tasks_'))
+@bot.callback_query_handler(lambda c: c.data.startswith("new_tasks"), state=CreateNewTask.board)
 def get_new_task_name(call):
     message = call.message
     trello_username = get_trello_username_by_chat_id("user.csv", message.chat.id)
     trello = TrelloAPIManager(trello_username)
     board_id = call.data.split("_")[2]
-    msg = bot.send_message(
-        message.chat.id, "Select List:", reply_markup=get_lists_btn(trello, board_id)
+    bot.send_message(
+        message.chat.id, "Select List:", reply_markup=get_inline_lists_btn(trello, board_id, "create_list_task")
     )
-    bot.register_next_step_handler(msg, send_new_task_lst)
+    bot.set_state(message.from_user.id, CreateNewTask.list, message.chat.id)
+    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+        data["task_board_id"] = board_id
 
 
-def send_new_task_lst(message):
-    new_task_user['List'] = message.text
-    msg = bot.send_message(message.chat.id, messages.TASK_NAME)
-    bot.register_next_step_handler(msg, name_task_desc)
+@bot.callback_query_handler(lambda c: c.data.startswith("create_list_task"))
+def get_list_id_for_new_task(call):
+    message = call.message
+    list_id = call.data.split("_")[3]
+    name = bot.send_message(message.chat.id, messages.TASK_NAME)
+    bot.set_state(message.from_user.id, CreateNewTask.name, message.chat.id)
+    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+        data["task_list_id"] = list_id
+        print(data.get("task_board_id"))
+    bot.register_next_step_handler(name, get_task_name)
 
 
-def name_task_desc(message):
-    new_task_user['Name'] = message.text
-    msg = bot.send_message(message.chat.id, messages.TASK_DES)
-    bot.register_next_step_handler(msg, select_member)
+@bot.message_handler(state=CreateNewTask.name)
+def get_task_name(message):
+    decs = bot.send_message(message.chat.id, messages.TASK_DES)
+    bot.set_state(message.from_user.id, CreateNewTask.description, message.chat.id)
+    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+        data["task_name"] = message.text
+        print(data.get("task_board_id"))
+    bot.register_next_step_handler(decs, get_task_description)
 
 
-def select_member(message):
-    new_task_user['Description'] = message.text
-    msg = bot.send_message(message.chat.id, messages.TASK_MEMBERS)
-    bot.register_next_step_handler(msg, selected_member)
+@bot.message_handler(state=CreateNewTask.description)
+def get_task_description(message):
+    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+        data["task_desc"] = message.text
+        board_id = data["task_board_id"]
+    trello_username = get_trello_username_by_chat_id("user.csv", message.chat.id)
+    bot.send_message(
+        message.chat.id,
+        messages.TASK_MEMBERS,
+        get_members_btn(trello_username, board_id, "new_task_member")
+    )
+    bot.set_state(message.from_user.id, CreateNewTask.members, message.chat.id)
 
 
-def selected_member(message):
-    new_task_user['Member'] = message.text
-    print(new_task_user)
+@bot.callback_query_handler(lambda c: c.data.startswith("new_task_member_"))
+def get_member_id(call):
+    message = call.message
+    member_id = call.data.split("_")[3]
+    bot.send_message(message.chat.id, messages.LABELS)
+    bot.set_state(message.from_user.id, CreateNewTask.members, message.chat.id)
+    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+        data["member_id"] = member_id
+
 
 if __name__ == '__main__':
     try:
         print('Worked!')
-        bot.infinity_polling(timeout=1000)
+        bot.polling(timeout=1000)
     except KeyboardInterrupt:
         print('Bot Stopped!')
