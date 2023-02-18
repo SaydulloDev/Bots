@@ -99,50 +99,50 @@ def get_new_task_name(call):
     trello = TrelloAPIManager(trello_username)
     board_id = call.data.split("_")[2]
     bot.send_message(
-        message.chat.id, "Select List:", reply_markup=get_inline_lists_btn(trello, board_id, "create_list_task")
+        message.chat.id, "Select List:", reply_markup=get_inline_lists_btn(trello, board_id, "list_name")
     )
     bot.set_state(message.from_user.id, CreateNewTask.list, message.chat.id)
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
         data["task_board_id"] = board_id
 
 
-@bot.callback_query_handler(lambda c: c.data.startswith("create_list_task"))
+@bot.callback_query_handler(lambda c: c.data.startswith("list_name"))
 def get_list_id_for_new_task(call):
     message = call.message
-    list_id = call.data.split("_")[3]
-    name = bot.send_message(message.chat.id, messages.TASK_NAME)
-    bot.set_state(message.from_user.id, CreateNewTask.name, message.chat.id)
-    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-        data["task_list_id"] = list_id
-        print(data.get("task_board_id"))
-    bot.register_next_step_handler(name, get_task_name)
+    data_ = call.data.split("_")[2]
+    msg = bot.send_message(call.from_user.id, messages.TASK_NAME)
+    bot.set_state(call.from_user.id, CreateNewTask.name, message.chat.id)
+    with bot.retrieve_data(call.from_user.id, message.chat.id) as data:
+        data['task_list_id'] = data_
+    bot.register_next_step_handler(msg, set_task_name)
 
 
-@bot.message_handler(state=CreateNewTask.name)
-def get_task_name(message):
-    decs = bot.send_message(message.chat.id, messages.TASK_DES)
+def set_task_name(message):
+    msg = bot.send_message(message.from_user.id, messages.TASK_DES)
     bot.set_state(message.from_user.id, CreateNewTask.description, message.chat.id)
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-        data["task_name"] = message.text
-        print(data.get("task_board_id"))
-    bot.register_next_step_handler(decs, get_task_description)
+        data['task_name'] = message.text
+        params = {
+            'name': data.get('name'),
+            'desc': data.get('desc')
+        }
+    bot.register_next_step_handler(msg, set_task_description)
 
 
-@bot.message_handler(state=CreateNewTask.description)
-def get_task_description(message):
+def set_task_description(message):
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-        data["task_desc"] = message.text
-        board_id = data["task_board_id"]
-    trello_username = get_trello_username_by_chat_id("user.csv", message.chat.id)
-    bot.send_message(
-        message.chat.id,
-        messages.TASK_MEMBERS,
-        get_members_btn(trello_username, board_id, "new_task_member")
-    )
+        data['task_desc'] = message.text
+        board_id = data['task_board_id']
+    trello_username = get_trello_user('user.csv', message.from_user.id)
+    keyboard = get_members_btn(trello_username, board_id, 'new_task_member')
     bot.set_state(message.from_user.id, CreateNewTask.members, message.chat.id)
+    bot.send_message(
+        message.from_user.id,
+        messages.TASK_MEMBERS, reply_markup=keyboard
+    )
 
 
-@bot.callback_query_handler(lambda c: c.data.startswith("new_task_member_"))
+@bot.callback_query_handler(lambda c: c.data.startswith("new_task_member"))
 def get_member_id(call):
     message = call.message
     member_id = call.data.split("_")[3]
@@ -150,6 +150,15 @@ def get_member_id(call):
     bot.set_state(message.from_user.id, CreateNewTask.members, message.chat.id)
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
         data["member_id"] = member_id
+
+
+@bot.callback_query_handler(lambda c: c.data.startswith("create_list_task"))
+def get_list_id_for_new_task(call):
+    message = call.message
+    list_id = call.data.split("_")[3]
+    bot.set_state(message.from_user.id, CreateNewTask.name, message.chat.id)
+    with bot.retrieve_data(message.from_user.id, message.chat.id) as file:
+        file["task_list_id"] = list_id
 
 
 if __name__ == '__main__':
